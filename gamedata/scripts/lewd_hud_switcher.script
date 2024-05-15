@@ -2,7 +2,7 @@
 ---                                                                                                                  ---
 ---    Original Author(s) : NLTP_ASHES                                                                               ---
 ---    Edited : N/A                                                                                                  ---
----    Date : 11/05/2024                                                                                             ---
+---    Date : 13/05/2024                                                                                             ---
 ---    License : Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)                            ---
 ---                                                                                                                  ---
 ---    Script used to switch from one weapon to another with a transition, when pressing Shift + "Weapon aim mode".  ---
@@ -56,14 +56,16 @@ local switch_cooldowns = {}                                     -- Table storing
 
 function change_weapon_hud()
     -- Get equipped weapon
-    -- TODO : check if this works better with db.actor:active_item()
-    local wpn = item_weapon.get_weapon_slot()
+    local wpn = db.actor:active_item()
     local wpn_se = wpn and alife_object(wpn:id())
     if not wpn_se then
         return
     end
 
-    -- TODO : prevent change if actor is aiming down sights
+    -- Prevent switch if weapon is zoomed
+    if axr_main.weapon_is_zoomed then
+        return
+    end
 
     -- Check if the weapon uses the HUD switcher
     local uses_switcher = ini_sys:r_bool_ex(wpn_se:section_name(), HUD_SWITCHER_ENABLED_KEY, false)
