@@ -1,0 +1,134 @@
+---==================================================================================================================---
+---                                                                                                                  ---
+---    Original Author(s) : NLTP_ASHES                                                                               ---
+---    Edited : N/A                                                                                                  ---
+---    Date : 11/05/2024                                                                                             ---
+---    License : Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)                            ---
+---                                                                                                                  ---
+---    Script used to switch from one weapon to another with a transition, when pressing Shift + "Weapon aim mode".  ---
+---                                                                                                                  ---
+---    Script was originally written by PriestSL, but was later completely rewritten.                                ---
+---    Parts of the script are based off item_weapon.script and item_device.script.                                  ---
+---    Script idea by L4U61N6 LUN4T1C.                                                                               ---
+---                                                                                                                  ---
+---    Example :                                                                                                     ---
+---                                                                                                                  ---
+---    [my_weapon]                                                                                                   ---
+---    scopes                          = some_scope                                                                  ---
+---                                                                                                                  ---
+---                                                                                                                  ---
+---    [my_weapon_some_scope]                                                                                        ---
+---    hud                             = my_weapon_some_scope_hud                                                    ---
+---    lewd_hud_switcher_enabled       = true                                                                        ---
+---    lewd_hud_switcher_next          = my_weapon_some_scope_off                                                    ---
+---                                                                                                                  ---
+---    [my_weapon_some_scope_hud]                                                                                    ---
+---    anm_lewd_hs_transition          = my_hands, my_gun_transition_on_to_off                                       ---
+---                                                                                                                  ---
+---                                                                                                                  ---
+---    [my_weapon_some_scope_off]                                                                                    ---
+---    hud                             = my_weapon_some_scope_off_hud                                                ---
+---    lewd_hud_switcher_enabled       = true                                                                        ---
+---    lewd_hud_switcher_next          = my_weapon_some_scope                                                        ---
+---                                                                                                                  ---
+---    [my_weapon_some_scope_off_hud]                                                                                ---
+---    anm_lewd_hs_transition          = my_hands, my_gun_transition_off_to_on                                       ---
+---                                                                                                                  ---
+---==================================================================================================================---
+
+-- ---------------------------------------------------------------------------------------------------------------------
+-- Constants, global variables
+-- ---------------------------------------------------------------------------------------------------------------------
+
+-- Constants
+local HUD_SWITCHER_ENABLED_KEY = "lewd_hud_switcher_enabled"    -- Master safe to enable/disable the HUD switcher
+local HUD_SWITCHER_NEXT_HUD_KEY = "lewd_hud_switcher_next"      -- Config key to define the next HUD to switch to
+local HUD_SWITCHER_ANIMATION_KEY = "anm_lewd_hs_transition"     -- Config key to define the transition animation
+
+-- Variables
+local is_holding_shift = false                                  -- Flag to check if the player is holding the Shift key
+local replace_next_anims = {}                                   -- Truth table storing guns on which the next anim should be replaced
+local switch_cooldowns = {}                                     -- Table storing the cooldowns before the next switch can be done
+
+-- ---------------------------------------------------------------------------------------------------------------------
+-- Core functions
+-- ---------------------------------------------------------------------------------------------------------------------
+
+function change_weapon_hud()
+    -- Get equipped weapon
+    -- TODO : check if this works better with db.actor:active_item()
+    local wpn = item_weapon.get_weapon_slot()
+    local wpn_se = wpn and alife_object(wpn:id())
+    if not wpn_se then
+        return
+    end
+
+    -- TODO : prevent change if actor is aiming down sights
+
+    -- Check if the weapon uses the HUD switcher
+    local uses_switcher = ini_sys:r_bool_ex(wpn_se:section_name(), HUD_SWITCHER_ENABLED_KEY, false)
+    if not uses_switcher then
+        return
+    end
+
+    -- Prevent switch if cooldown is active
+    if time_global() < (switch_cooldowns[wpn_se:section_name()] or 0) then
+        return
+    end
+
+    -- Get the next weapon HUD
+    local new_section = ini_sys:r_string_ex(wpn_se:section_name(), HUD_SWITCHER_NEXT_HUD_KEY, nil)
+    if not new_section then
+        printf("[LEWD HS] ERROR | The section %s does not have a next HUD defined", wpn_se:section_name())
+        return
+    end
+
+    if not ini_sys:section_exist(new_section) then
+        printf("[LEWD HS] ERROR | The next HUD for %s does not exist : ", wpn_se:section_name(), new_section)
+        return
+    end
+
+    -- Change to the new weapon HUD
+    alife_clone_weapon(wpn_se, new_section)
+
+    -- Set next anim to be replaced
+    replace_next_anims[new_section] = true
+end
+
+function on_key_release(dik)
+    if dik == DIK_keys.DIK_LSHIFT then
+        is_holding_shift = false
+    end
+end
+
+function on_key_press(dik)
+    if dik == DIK_keys.DIK_LSHIFT then
+        is_holding_shift = true
+    end
+
+    if is_holding_shift and dik_to_bind(dik) == key_bindings.kWPN_FUNC then
+        change_weapon_hud()
+    end
+end
+
+function actor_on_hud_animation_play(anm_table, obj)
+    if replace_next_anims[obj:section()] then
+        -- Replace the draw anim with the transition anim
+        anm_table.anm_name = HUD_SWITCHER_ANIMATION_KEY
+        replace_next_anims[obj:section()] = nil
+
+        -- Set a cooldown before actor can switch again
+        local hud_section = ini_sys:r_string_ex(obj:section(), "hud")
+        switch_cooldowns[obj:section()] = time_global() + game.get_motion_length(hud_section, HUD_SWITCHER_ANIMATION_KEY, 1)
+    end
+end
+
+-- ---------------------------------------------------------------------------------------------------------------------
+-- Callbacks registration
+-- ---------------------------------------------------------------------------------------------------------------------
+
+function on_game_start()
+    RegisterScriptCallback("on_key_press", on_key_press)
+    RegisterScriptCallback("on_key_release", on_key_release)
+    RegisterScriptCallback("actor_on_hud_animation_play", actor_on_hud_animation_play)
+end
