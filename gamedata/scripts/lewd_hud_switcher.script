@@ -40,7 +40,7 @@
 -- Constants, global variables
 -- ---------------------------------------------------------------------------------------------------------------------
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 -- Constants
 HUD_SWITCHER_ENABLED_KEY = "lewd_hud_switcher_enabled"    -- Master safe to enable/disable the HUD switcher
