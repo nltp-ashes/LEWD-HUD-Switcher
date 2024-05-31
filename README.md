@@ -12,7 +12,49 @@ S.T.A.L.K.E.R. relies on a gigantic hack to handle weapon scopes. When applying 
 
 This does not natively allow for smooth transitions, so this script takes a shot at addressing that. This script will replace the draw animation of the copy of the weapon, with a custom one (defined in ltx) to guarantee a more seamless transition.
 
----
+The `lewd_hud_switcher.script` will look for specific lines in the weapon config :
+
+- **Name**          : `lewd_hud_switcher_enabled`  
+  **Presence**      : Required  
+  **Default value** : N/A  
+  **Description**   : Master safe, to enable/disable the script
+
+- **Name**          : `lewd_hud_switcher_next`  
+  **Presence**      : Required  
+  **Default value** : N/A  
+  **Description**   : Name of the section to switch to when the keybind is pressed
+
+It will also look for specific lines in the weapon HUD config :
+
+- **Name**          : `anm_lewd_hs_transition`  
+  **Presence**      : Required  
+  **Default value** : N/A  
+  **Description**   : Animation configuration. Hands anim, item anim, speed
+
+Example :
+
+```INI
+my_weapon]
+scopes                          = some_scope
+```
+```INI
+[my_weapon_some_scope]
+hud                             = my_weapon_some_scope_hud
+lewd_hud_switcher_enabled       = true
+lewd_hud_switcher_next          = my_weapon_some_scope_off
+
+[my_weapon_some_scope_hud]
+anm_lewd_hs_transition          = my_hands, my_gun_transition_on_to_off
+```
+```INI
+[my_weapon_some_scope_off]
+hud                             = my_weapon_some_scope_off_hud
+lewd_hud_switcher_enabled       = true
+lewd_hud_switcher_next          = my_weapon_some_scope
+                                                   
+[my_weapon_some_scope_off_hud]
+anm_lewd_hs_transition          = my_hands, my_gun_transition_off_to_on
+```
 
 ### REQUIREMENTS
 
